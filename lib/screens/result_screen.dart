@@ -10,7 +10,7 @@ class ResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = ticket.questions.length;
-    final passed = correct >= (total * 0.8).ceil();
+    final passed = correct >= total - 1;
 
     return Scaffold(
       appBar: AppBar(
