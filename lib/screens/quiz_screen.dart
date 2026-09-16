@@ -1,10 +1,15 @@
+import 'dart:async';
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
+
 import '../models.dart';
-import 'result_screen.dart';
 import 'photo_screen.dart';
+import 'result_screen.dart';
 
 class QuizScreen extends StatefulWidget {
   final Ticket ticket;
+
   const QuizScreen({super.key, required this.ticket});
 
   @override
@@ -15,6 +20,44 @@ class _QuizScreenState extends State<QuizScreen> {
   int currentIndex = 0;
   int? selected;
   int correctCount = 0;
+
+  static const int secondsPerQuestion = 60;
+  late int secondsLeft;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    secondsLeft = secondsPerQuestion * widget.ticket.questions.length;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+          _timer?.cancel();
+          _timeIsUp();
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _timeIsUp() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ResultScreen(
+          ticket: widget.ticket,
+          correct: correctCount,
+        ),
+      ),
+    );
+  }
 
   Question get q => widget.ticket.questions[currentIndex];
   bool get isLast => currentIndex == widget.ticket.questions.length - 1;
@@ -30,10 +73,14 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _next() {
     if (isLast) {
+      _timer?.cancel();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ResultScreen(ticket: widget.ticket, correct: correctCount),
+          builder: (_) => ResultScreen(
+            ticket: widget.ticket,
+            correct: correctCount,
+          ),
         ),
       );
     } else {
@@ -44,7 +91,7 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-  void _openPhoto() {
+  void _openTicketPhoto() {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -54,6 +101,18 @@ class _QuizScreenState extends State<QuizScreen> {
         ),
       ),
     );
+  }
+
+  String get _timeLabel {
+    final m = secondsLeft ~/ 60;
+    final s = secondsLeft % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  Color get _timeColor {
+    if (secondsLeft <= 60) return Colors.red.shade400;
+    if (secondsLeft <= 180) return Colors.orange.shade400;
+    return Colors.white;
   }
 
   Color? _optionColor(int i) {
@@ -80,10 +139,30 @@ class _QuizScreenState extends State<QuizScreen> {
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
         actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.timer_outlined, size: 20, color: _timeColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    _timeLabel,
+                    style: TextStyle(
+                      color: _timeColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Фото билета',
             icon: const Icon(Icons.image),
-            onPressed: _openPhoto,
+            onPressed: _openTicketPhoto,
           ),
         ],
       ),
@@ -100,8 +179,36 @@ class _QuizScreenState extends State<QuizScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(q.text,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  if (q.image != null && q.image!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PhotoScreen(
+                              imagePath: q.image!,
+                              title: 'Иллюстрация',
+                            ),
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.asset(
+                            q.image!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Text(
+                    q.text,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   ...List.generate(q.options.length, (i) {
                     return Padding(
@@ -113,7 +220,10 @@ class _QuizScreenState extends State<QuizScreen> {
                           borderRadius: BorderRadius.circular(10),
                           onTap: isAnswered ? null : () => _answer(i),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
                             decoration: BoxDecoration(
                               border: Border.all(
                                 color: _optionBorder(i) ?? Colors.grey.shade300,
@@ -126,16 +236,22 @@ class _QuizScreenState extends State<QuizScreen> {
                                 CircleAvatar(
                                   radius: 14,
                                   backgroundColor: Colors.green.shade100,
-                                  child: Text('${i + 1}',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.green.shade900,
-                                        fontWeight: FontWeight.bold,
-                                      )),
+                                  child: Text(
+                                    '${i + 1}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.green.shade900,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
-                                Expanded(child: Text(q.options[i],
-                                    style: const TextStyle(fontSize: 15))),
+                                Expanded(
+                                  child: Text(
+                                    q.options[i],
+                                    style: const TextStyle(fontSize: 15),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -158,8 +274,10 @@ class _QuizScreenState extends State<QuizScreen> {
                     backgroundColor: Colors.green.shade700,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: Text(isLast ? 'Завершить' : 'Далее',
-                      style: const TextStyle(fontSize: 16)),
+                  child: Text(
+                    isLast ? 'Завершить' : 'Далее',
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
             ),
