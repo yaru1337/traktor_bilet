@@ -2,13 +2,20 @@ class Question {
   final String text;
   final List<String> options;
   final int correct;
+  final String? image;
 
-  Question({required this.text, required this.options, required this.correct});
+  Question({
+    required this.text,
+    required this.options,
+    required this.correct,
+    this.image,
+  });
 
   factory Question.fromJson(Map<String, dynamic> json) => Question(
         text: json['text'] as String,
         options: List<String>.from(json['options'] as List),
         correct: json['correct'] as int,
+        image: json['image'] as String?,
       );
 }
 
