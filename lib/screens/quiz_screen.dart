@@ -20,7 +20,9 @@ class _QuizScreenState extends State<QuizScreen> {
   int currentIndex = 0;
   int? selected;
   int correctCount = 0;
+  int mistakes = 0;
 
+  static const int maxMistakes = 1;
   static const int secondsPerQuestion = 60;
   late int secondsLeft;
   Timer? _timer;
@@ -35,7 +37,7 @@ class _QuizScreenState extends State<QuizScreen> {
         secondsLeft--;
         if (secondsLeft <= 0) {
           _timer?.cancel();
-          _timeIsUp();
+          _finish();
         }
       });
     });
@@ -47,7 +49,7 @@ class _QuizScreenState extends State<QuizScreen> {
     super.dispose();
   }
 
-  void _timeIsUp() {
+  void _finish() {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -65,24 +67,31 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _answer(int index) {
     if (isAnswered) return;
+
+    final isCorrect = index == q.correct;
+
     setState(() {
       selected = index;
-      if (index == q.correct) correctCount++;
+      if (isCorrect) {
+        correctCount++;
+      } else {
+        mistakes++;
+      }
     });
+
+    // Вторая ошибка — сразу завершаем билет
+    if (mistakes > maxMistakes) {
+      _timer?.cancel();
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (mounted) _finish();
+      });
+    }
   }
 
   void _next() {
     if (isLast) {
       _timer?.cancel();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ResultScreen(
-            ticket: widget.ticket,
-            correct: correctCount,
-          ),
-        ),
-      );
+      _finish();
     } else {
       setState(() {
         currentIndex++;
@@ -132,6 +141,7 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   Widget build(BuildContext context) {
     final total = widget.ticket.questions.length;
+    final blocked = mistakes > maxMistakes;
 
     return Scaffold(
       appBar: AppBar(
@@ -218,7 +228,7 @@ class _QuizScreenState extends State<QuizScreen> {
                         borderRadius: BorderRadius.circular(10),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(10),
-                          onTap: isAnswered ? null : () => _answer(i),
+                          onTap: (isAnswered || blocked) ? null : () => _answer(i),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
@@ -269,7 +279,7 @@ class _QuizScreenState extends State<QuizScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: isAnswered ? _next : null,
+                  onPressed: (isAnswered && !blocked) ? _next : null,
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.green.shade700,
                     padding: const EdgeInsets.symmetric(vertical: 14),
