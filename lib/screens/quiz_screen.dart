@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'dart:ui' show FontFeature;
 import '../models.dart';
 import 'result_screen.dart';
 import 'photo_screen.dart';
@@ -22,7 +23,6 @@ class _QuizScreenState extends State<QuizScreen> {
   Timer? _timer;
   int secondsLeft = examDurationSeconds;
   bool finished = false;
-  String? _finishReason; // 'time' | 'mistakes' | null
 
   @override
   void initState() {
@@ -92,10 +92,12 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _answer(int index) {
     if (finished) return;
+    if (isAnswered) return; // ответ уже зафиксирован — менять нельзя
+
     setState(() {
       answers[currentIndex] = index;
     });
-    // Проверяем, не набралось ли 2 ошибки
+
     if (wrongCount >= maxMistakes) {
       _finish('mistakes');
     }
@@ -125,7 +127,6 @@ class _QuizScreenState extends State<QuizScreen> {
     if (finished) return;
     finished = true;
     _timer?.cancel();
-    _finishReason = reason;
 
     Navigator.pushReplacement(
       context,
@@ -189,7 +190,6 @@ class _QuizScreenState extends State<QuizScreen> {
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
         actions: [
-          // Таймер
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
@@ -208,7 +208,6 @@ class _QuizScreenState extends State<QuizScreen> {
               ],
             ),
           ),
-          // Счётчик ошибок
           Padding(
             padding: const EdgeInsets.only(right: 10),
             child: Row(
@@ -320,7 +319,8 @@ class _QuizScreenState extends State<QuizScreen> {
                         borderRadius: BorderRadius.circular(10),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(10),
-                          onTap: () => _answer(i),
+                          // Клик работает только пока ответ не дан
+                          onTap: isAnswered ? null : () => _answer(i),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
