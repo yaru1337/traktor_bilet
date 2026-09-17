@@ -5,13 +5,31 @@ class ResultScreen extends StatelessWidget {
   final Ticket ticket;
   final int correct;
 
-  const ResultScreen({super.key, required this.ticket, required this.correct});
+  /// 'time' — время вышло, 'mistakes' — 2 ошибки, null — завершено вручную
+  final String? failReason;
+
+  const ResultScreen({
+    super.key,
+    required this.ticket,
+    required this.correct,
+    this.failReason,
+  });
 
   @override
   Widget build(BuildContext context) {
     final total = ticket.questions.length;
-    final mistakes = total - correct;
-    final passed = mistakes <= 1;
+    final passed = failReason == null && correct >= (total * 0.9).ceil();
+
+    String subtitle;
+    if (passed) {
+      subtitle = 'Сдано';
+    } else if (failReason == 'time') {
+      subtitle = 'Время вышло';
+    } else if (failReason == 'mistakes') {
+      subtitle = 'Две ошибки — несдача';
+    } else {
+      subtitle = 'Не сдано';
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -33,10 +51,14 @@ class ResultScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 '$correct из $total',
-                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+              const SizedBox(height: 4),
               Text(
-                passed ? 'Сдано' : 'Не сдано',
+                subtitle,
                 style: TextStyle(
                   fontSize: 20,
                   color: passed ? Colors.green.shade700 : Colors.red.shade700,
@@ -46,7 +68,8 @@ class ResultScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
+                  onPressed: () =>
+                      Navigator.popUntil(context, (r) => r.isFirst),
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.green.shade700,
                     padding: const EdgeInsets.symmetric(vertical: 14),
