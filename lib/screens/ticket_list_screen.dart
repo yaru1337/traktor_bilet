@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data.dart';
 import '../models.dart';
 import 'quiz_screen.dart';
+import 'stats_screen.dart';
 
 class TicketListScreen extends StatefulWidget {
   const TicketListScreen({super.key});
@@ -51,6 +52,16 @@ class _TicketListScreenState extends State<TicketListScreen> {
         title: const Text('Тракторные билеты'),
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Статистика',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StatsScreen()),
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<List<Ticket>>(
         future: _future,

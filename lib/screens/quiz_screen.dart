@@ -4,6 +4,7 @@ import 'dart:ui' show FontFeature;
 import '../models.dart';
 import 'result_screen.dart';
 import 'photo_screen.dart';
+import '../stats.dart';
 
 class QuizScreen extends StatefulWidget {
   final Ticket ticket;
@@ -128,12 +129,22 @@ class _QuizScreenState extends State<QuizScreen> {
     finished = true;
     _timer?.cancel();
 
+    // Сохраняем результат в статистику
+    final total = widget.ticket.questions.length;
+    final cc = correctCount;
+    final passed = reason == null && cc >= (total * 0.8).ceil();
+    StatsService.saveResult(
+      ticketId: widget.ticket.id,
+      correct: cc,
+      passed: passed,
+    );
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => ResultScreen(
           ticket: widget.ticket,
-          correct: correctCount,
+          correct: cc,
           failReason: reason,
         ),
       ),
