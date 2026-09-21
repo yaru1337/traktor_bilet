@@ -38,49 +38,65 @@
     </div>
 
     <script>
-            // ============ НАСТРОЙКИ ============
-            // Вставьте свой хеш, полученный на https://emn178.github.io/online-tools/sha256.html
-            const PW_HASH = "3543681e328e560341a6259766f55ddafa25d6831836fc3b5fb3596ba9283b5c";
+                    // ============ НАСТРОЙКИ ============
+                    // Вставьте свой хеш, полученный на https://emn178.github.io/online-tools/sha256.html
+                    const PW_HASH = "3543681e328e560341a6259766f55ddafa25d6831836fc3b5fb3596ba9283b5c";
 
-            // ===================================
+                    // ===================================
 
-            async function sha256(str) {
-              const buf = new TextEncoder().encode(str);
-              const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-              return Array.from(new Uint8Array(hashBuf))
-                .map(b => b.toString(16).padStart(2, '0'))
-                .join('');
+                    async function sha256(str) {
+                      const buf = new TextEncoder().encode(str);
+                      const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+                      return Array.from(new Uint8Array(hashBuf))
+                        .map(b => b.toString(16).padStart(2, '0'))
+                        .join('');
+                    }
+
+                    async function checkPw() {
+                      const input = document.getElementById('pw-input').value;
+                      const err = document.getElementById('pw-err');
+                      if (!input) {
+                        err.textContent = 'Введите пароль';
+                        return;
+                      }
+                      const hash = await sha256(input);
+                      if (hash === PW_HASH) {
+                        try { localStorage.setItem('authed', '1'); } catch (e) {}
+                        document.getElementById('pw-gate').style.display = 'none';
+                      } else {
+                        err.textContent = 'Неверный пароль';
+                        document.getElementById('pw-input').value = '';
+                        document.getElementById('pw-input').focus();
+                      }
+                    }
+
+                    document.getElementById('pw-btn').addEventListener('click', checkPw);
+                    document.getElementById('pw-input').addEventListener('keydown', e => {
+                      if (e.key === 'Enter') checkPw();
+                    });
+
+                    // Если уже проходили — сразу пропускаем
+                    try {
+                      if (localStorage.getItem('authed') === '1') {
+                        document.getElementById('pw-gate').style.display = 'none';
+                      }
+                    } catch (e) {}
+    </script>
+
+
+    <!-- Принудительное отключение Service Worker -->
+    <script>
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(rs) {
+                rs.forEach(function(r) { r.unregister(); });
+              });
+              // Через секунду — ещё раз, на случай повторной регистрации
+              setTimeout(function() {
+                navigator.serviceWorker.getRegistrations().then(function(rs) {
+                  rs.forEach(function(r) { r.unregister(); });
+                });
+              }, 1500);
             }
-
-            async function checkPw() {
-              const input = document.getElementById('pw-input').value;
-              const err = document.getElementById('pw-err');
-              if (!input) {
-                err.textContent = 'Введите пароль';
-                return;
-              }
-              const hash = await sha256(input);
-              if (hash === PW_HASH) {
-                try { localStorage.setItem('authed', '1'); } catch (e) {}
-                document.getElementById('pw-gate').style.display = 'none';
-              } else {
-                err.textContent = 'Неверный пароль';
-                document.getElementById('pw-input').value = '';
-                document.getElementById('pw-input').focus();
-              }
-            }
-
-            document.getElementById('pw-btn').addEventListener('click', checkPw);
-            document.getElementById('pw-input').addEventListener('keydown', e => {
-              if (e.key === 'Enter') checkPw();
-            });
-
-            // Если уже проходили — сразу пропускаем
-            try {
-              if (localStorage.getItem('authed') === '1') {
-                document.getElementById('pw-gate').style.display = 'none';
-              }
-            } catch (e) {}
     </script>
 
     <!-- ===== Загрузка Flutter ===== -->
